@@ -7,7 +7,7 @@ setup:
 	vagrant up && \
 	vagrant ssh controller -- -t 'sudo cp -p /etc/munge/munge.key /vagrant/' && \
 	vagrant ssh server -- -t 'sudo cp -p /vagrant/munge.key /etc/munge/' && \
-	vagrant ssh server -- -t 'sudo chown munge /etc/munge/munge.key' && \
+	vagrant ssh server -- -t 'sudo chown munge:munge /etc/munge/munge.key' && \
 	vagrant ssh controller -- -t 'ssh-keygen -b 2048 -t rsa -q -N "" -f /home/vagrant/.ssh/id_rsa' && \
 	vagrant ssh controller -- -t 'cp /home/vagrant/.ssh/id_rsa.pub /vagrant/id_rsa.controller.pub' && \
 	vagrant ssh server -- -t 'cat /vagrant/id_rsa.controller.pub >> .ssh/authorized_keys' && \
@@ -24,12 +24,14 @@ start:
 	find slurm -type d -exec chmod a+rwx {} \; && \
 	vagrant ssh controller -- -t 'sudo /etc/init.d/munge start' && \
 	vagrant ssh server -- -t 'sudo /etc/init.d/munge start' && \
-	vagrant ssh controller -- -t 'sudo slurmctld; sleep 30' && \
-	vagrant ssh server -- -t 'sudo slurmd; sleep 30' && \
-	vagrant ssh controller -- -t 'sudo scontrol update nodename=server state=resume'
-
-# might need this to fix node down state
-# sudo scontrol update nodename=server state=resume
+	sleep 30 && \
+	vagrant ssh controller -- 'sudo slurmctld' && \
+	sleep 30 && \
+	vagrant ssh server -- 'sudo slurmd' && \
+	sleep 30 && \
+	vagrant ssh controller -- -t 'sudo scontrol update nodename=server state=resume' && \
+	sleep 30 && \
+	vagrant ssh server -- 'sudo killall munged; sudo killall slurmd; sudo /etc/init.d/munge start; sudo slurmd'
 
 # https://slurm.schedmd.com/troubleshoot.html
 # munge log: /var/log/munge/munged.log
